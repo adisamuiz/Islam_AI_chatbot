@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "@google/genai": "^1.34.0",
+    "axios": "^1.13.2",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "mongoose": "^9.0.2",
+    "nodemon": "^3.1.11"
+  },
+  "name": "islam_ai_chatbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "fetch_quran.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon upload_quran_to_db.js",
+    "start": "node fetch_quran.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module"
+}
