@@ -13,7 +13,7 @@
   "main": "fetch_quran.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon upload_quran_to_db.js",
+    "dev": "nodemon RAG_search.js",
     "start": "node fetch_quran.js"
   },
   "keywords": [],

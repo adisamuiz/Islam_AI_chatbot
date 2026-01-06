@@ -15,7 +15,7 @@ async function createEmbedding() {
     while(true){
         const verses = await Verse.find({ quran_en_embeddings: { $size: 0 } })
         .select("en_translation") 
-        .limit(100)
+        .limit(5)
         .lean()
 
         if (verses.length === 0) return console.log("All verses already embedded.")
