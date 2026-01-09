@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai"
 import mongoose from "mongoose"
 import Verse from "./quran_db_schema.js"
 
-const apiKey = process.env.GEMINI_API_KEY
+const apiKey = process.env.GEMINI_API_KEY_1
 const mongoDBUrl = process.env.MONGO_DB_URL
 
 async function createEmbedding() {
@@ -11,11 +11,11 @@ async function createEmbedding() {
     await mongoose.connect(mongoDBUrl)
     console.log("MongoDB connected!")
 
-    let processedCount = 1920
+    let processedCount = 2000
     while(true){
         const verses = await Verse.find({ quran_en_embeddings: { $size: 0 } })
         .select("en_translation") 
-        .limit(5)
+        .limit(100)
         .lean()
 
         if (verses.length === 0) return console.log("All verses already embedded.")
