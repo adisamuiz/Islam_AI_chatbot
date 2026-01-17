@@ -1,4 +1,5 @@
 import express from "express"
+import cors from "cors"
 import "dotenv/config"
 import { GoogleGenAI } from "@google/genai"
 import mongoose from "mongoose"
@@ -10,6 +11,7 @@ const apiKey = process.env.GEMINI_API_KEY_1
 const mongoDBUrl = process.env.MONGO_DB_URL
 const ai = new GoogleGenAI({apiKey})
 app.use(express.json())
+app.use(cors())
 
 async function getQueryVecEmbedding(userInput){
     try{

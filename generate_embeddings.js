@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai"
 import mongoose from "mongoose"
 import Verse from "./quran_db_schema.js"
 
-const apiKey = process.env.GEMINI_API_KEY_1
+const apiKey = process.env.GEMINI_API_KEY
 const mongoDBUrl = process.env.MONGO_DB_URL
 
 async function createEmbedding() {
