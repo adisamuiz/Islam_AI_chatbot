@@ -3,7 +3,7 @@ import cors from "cors"
 import "dotenv/config"
 import { GoogleGenAI } from "@google/genai"
 import mongoose from "mongoose"
-import Verse from "./quran_db_schema.js"
+import Verse from "./db_schema.js"
 
 const app = express()
 const port = 3000
