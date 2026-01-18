@@ -1,2 +1,5 @@
 .env
 node_modules/
+full_quran.json
+hadith_bukhari.json
+hadith_muslim.json
