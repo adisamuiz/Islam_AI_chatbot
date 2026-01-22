@@ -114,6 +114,8 @@ app.post('/api/chat', async (req, res) => {
         console.log("message:", message)
         const vector = await getQueryVecEmbedding(message)
         const verses = await findSimilarVerses(vector)
+        console.log("verses:", verses)
+        console.log("vector:", vector)
 
         if (!verses || verses.length === 0) {
             return res.json({ reply: "I couldn't find relevant verses for that inquiry." })

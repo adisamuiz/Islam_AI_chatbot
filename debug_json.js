@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-const filename = 'hadith_muslim.json';
+const filename = 'tafsir.json';
 
 try {
     console.log(`Reading ${filename}...`);

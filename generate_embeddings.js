@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai"
 import mongoose from "mongoose"
 import Verse from "./db_schema.js"
 
-const apiKey = process.env.GEMINI_API_KEY
+const apiKey = process.env.GEMINI_API_KEY_2
 const mongoDBUrl = process.env.MONGO_DB_URL
 
 async function createEmbedding() {
@@ -11,11 +11,11 @@ async function createEmbedding() {
     await mongoose.connect(mongoDBUrl)
     console.log("MongoDB connected!")
 
-    let processedCount = 2000
+    let processedCount = 4000
     while(true){
-        const verses = await Verse.find({ quran_en_embeddings: { $size: 0 } })
+        const verses = await Verse.find({ hadith_bukhari_en_embeddings: { $size: 0 } })
         .select("en_translation") 
-        .limit(100)
+        .limit(50)
         .lean()
 
         if (verses.length === 0) return console.log("All verses already embedded.")
@@ -34,7 +34,7 @@ async function createEmbedding() {
             const bulkOperation = verses.map((verse, index) => ({
                 updateOne: {
                     filter: { _id: verse._id },
-                    update: { $set: { quran_en_embeddings: response.embeddings[index].values } }
+                    update: { $set: { hadith_bukhari_en_embeddings: response.embeddings[index].values } }
                 }
             }))
             await Verse.bulkWrite(bulkOperation)
@@ -51,7 +51,7 @@ async function createEmbedding() {
 
             if (error.message.includes("429")) {
                 console.log("⏳ Quota exceeded. Sleeping for 30s...")
-                await new Promise(resolve => setTimeout(resolve, 60000))
+                await new Promise(resolve => setTimeout(resolve, 50000))
             } else {
                 process.exit(1)
                 }
