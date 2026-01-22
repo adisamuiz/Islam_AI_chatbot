@@ -12,7 +12,7 @@ const mongoDBUrl = process.env.MONGO_DB_URL
 const ai = new GoogleGenAI({apiKey})
 app.use(express.json())
 app.use(cors({
-    origin: 'https://islam-ai-frontend.vercel.app/' // Your Vercel Frontend URL
+    origin: 'https://islam-ai-frontend.vercel.app' // Your Vercel Frontend URL
 }))
 
 async function getQueryVecEmbedding(userInput){
