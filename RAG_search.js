@@ -11,7 +11,9 @@ const apiKey = process.env.GEMINI_API_KEY_1
 const mongoDBUrl = process.env.MONGO_DB_URL
 const ai = new GoogleGenAI({apiKey})
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+    origin: 'https://islam-ai-frontend.vercel.app/' // Your Vercel Frontend URL
+}))
 
 async function getQueryVecEmbedding(userInput){
     try{
