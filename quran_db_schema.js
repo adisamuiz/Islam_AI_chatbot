@@ -1,11 +1,11 @@
 // import mongoose from "mongoose"
 
-// const modelName = "hadith_bukhari"
+// const modelName = "hadith_muslim"
 // const verseSchema = new mongoose.Schema({
 //     _id: String,
 //     arabic_text: { type: String, required: true },
 //     en_translation: { type: String, required: true },
-//     hadith_bukhari_en_embeddings: {type: [Number], default: []},
+//     hadith_muslim_en_embeddings: {type: [Number], default: []},
 //     metadata: {
 //         book: Number,
 //         hadith: Number,

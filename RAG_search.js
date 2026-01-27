@@ -3,16 +3,20 @@ import cors from "cors"
 import "dotenv/config"
 import { GoogleGenAI } from "@google/genai"
 import mongoose from "mongoose"
-import Verse from "./db_schema.js"
+import Verse from "./quran_db_schema.js"
+import hadithBukhari from "./hadith_bukhari_db_schema.js"
+import hadithMuslim from "./hadith_muslim_db_schema.js"
+import multer from "multer"
 
 const app = express()
 const port = 3000
-const apiKey = process.env.GEMINI_API_KEY_1
+const upload = multer({ storage: multer.memoryStorage() })
+const apiKey = process.env.GEMINI_API_KEY_2
 const mongoDBUrl = process.env.MONGO_DB_URL
 const ai = new GoogleGenAI({apiKey})
 app.use(express.json())
 app.use(cors({
-    origin: 'https://islam-ai-frontend.vercel.app' // Your Vercel Frontend URL
+    //origin: 'https://islam-ai-frontend.vercel.app' // Your Vercel Frontend URL
 }))
 
 async function getQueryVecEmbedding(userInput){
@@ -63,32 +67,97 @@ async function findSimilarVerses(queryVector) {
     }
 }
 
-async function generateAnswer(userQuestion, retrievedVerses) {
-    const contextBlock = retrievedVerses.map(v => 
+async function findSimilarHadithBukhari(queryVector) {
+    try{
+        await mongoose.connect(mongoDBUrl)
+        const results = await hadithBukhari.aggregate([
+            {
+                "$vectorSearch": {
+                    "index": "hadith_bukhari_vector_index",
+                    "path": "hadith_bukhari_en_embeddings",
+                    "queryVector": queryVector,
+                    "numCandidates": 100, 
+                    "limit": 5
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "book": "$metadata.book",
+                    "hadith": "$metadata.hadith",
+                    "source": "$metadata.source",
+                    "book_title": "$metadata.book_title",
+                    "arabic_text": 1,
+                    "en_translation": 1,
+                    "similarity_score": { "$meta": "vectorSearchScore" }
+                }
+            }
+        ])
+        return results
+    }
+    catch (error){
+        console.error("Agregation failed:", error)
+    }
+}
+
+async function findSimilarHadithMuslim(queryVector) {
+    try{
+        await mongoose.connect(mongoDBUrl)
+        const results = await hadithMuslim.aggregate([
+            {
+                "$vectorSearch": {
+                    "index": "hadith_muslim_vector_index",
+                    "path": "hadith_muslim_en_embeddings",
+                    "queryVector": queryVector,
+                    "numCandidates": 100, 
+                    "limit": 5
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "book": "$metadata.book",
+                    "hadith": "$metadata.hadith",
+                    "source": "$metadata.source",
+                    "book_title": "$metadata.book_title",
+                    "arabic_text": 1,
+                    "en_translation": 1,
+                    "similarity_score": { "$meta": "vectorSearchScore" }
+                }
+            }
+        ])
+        return results
+    }
+    catch (error){
+        console.error("Agregation failed:", error)
+    }
+}
+
+async function generateAnswer(userQuestion, retrievedVerses, retrievedHadith) {
+    const quranContext = retrievedVerses.map(v => 
         `Source: Surah ${v.surah}: Verse ${v.ayah}
          Text: "${v.en_translation}"`
+    ).join("\n\n---\n\n")
+    const hadithContext = retrievedHadith.map(h => 
+        `Source: ${h.source} - Book ${h.book}, Hadith ${h.hadith} (${h.book_title})
+         Text: "${h.en_translation}"`
     ).join("\n\n---\n\n")
 
     const systemInstructionText = `
     Role: Respectful Islamic educator & researcher. NOT a Mufti.
 Constraints:
-1. GROUNDING (STRICT): 
-   - You are provided with specific Islamic texts (Quran/Hadith/Tafsir) as context.
-   - Answer strictly based on this provided context.
-   - If the answer is NOT in the context, state: "The provided database does not contain specific information on this." Do NOT use outside knowledge to fill gaps.
-2. HIERARCHY: Prioritize provided proofs in order: 1. Quran -> 2. Sahih Hadith -> 3. Consensus.
-3. DIVERSITY: Acknowledge Madhab differences (Hanafi, Shafi'i, etc.) if mentioned in context.
-4. GUARDRAILS:
-   - FATWA BAN: For personal rulings (e.g., divorce), state: "I am an AI, consult a local scholar."
-   - SAFETY: For violence/harm, cite Quran 5:32.
-5. FORMAT: 
+    answer based on the provided context only.
+ FORMAT: 
    - CITATIONS: Mandatory. Use the exact Source/ID provided in the context.
    - STYLE: **Bold** terms. Lists for steps. Transliteration + English preferred over unverified Arabic.
     `
 
     const userPrompt = `
     CONTEXT VERSES:
-    ${contextBlock}
+    ${quranContext}
+
+    CONTEXT HADITHS:
+    ${hadithContext}
 
     USER QUESTION:
     "${userQuestion}"
@@ -110,22 +179,72 @@ Constraints:
     }
 }
 
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', upload.single('image'), async (req, res) => {
     try {
-        const message = req.body.message
+        const message = req.body.message || "what is this about"
+        const imageFile = req.file
+        let searchContext = message
+        let imageAnalysis = ""
         console.log("message:", message)
-        const vector = await getQueryVecEmbedding(message)
-        const verses = await findSimilarVerses(vector)
+
+        if (imageFile) {
+            console.log("📸 Image Detected. Switching to Vision Mode.")
+            const imageBase64 = imageFile.buffer.toString('base64')
+            const visionResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: [
+                        { 
+                            inlineData: {
+                                mimeType: imageFile.mimetype,
+                                data: imageBase64
+                            },
+                        },
+                        { text: message }, // The user's question about the image
+                    ],
+            })
+            console.log("👁️ Vision Response:", visionResponse)
+            if (visionResponse.candidates && visionResponse.candidates.length > 0) {
+                // Manually grab the text from the first candidate
+                imageAnalysis = visionResponse.candidates[0].content.parts[0].text;
+            } else {
+                imageAnalysis = "No description available.";
+            }            
+            console.log("👁️ AI Saw:", imageAnalysis)
+            searchContext = `${message} Context: ${imageAnalysis}`
+        }
+
+        const vector = await getQueryVecEmbedding(searchContext)
+        const [verses, hadithBukharis, hadithMuslims] = await Promise.all([
+            findSimilarVerses(vector),
+            findSimilarHadithBukhari(vector),
+            findSimilarHadithMuslim(vector)
+        ])
+        const hadiths = hadithBukharis.concat(hadithMuslims)
         console.log("verses:", verses)
         console.log("vector:", vector)
 
-        if (!verses || verses.length === 0) {
+        if ((!verses || verses.length === 0) && (!hadiths || hadiths.length === 0)){
             return res.json({ reply: "I couldn't find relevant verses for that inquiry." })
         }
-        const aiResponse = await generateAnswer(message, verses)
+
+        const aiResponse = await generateAnswer(message, verses, hadiths)
+        const getHadithUrl = (h) => {
+            const collection = h.source.toLowerCase().includes('bukhari') ? 'bukhari' : 'muslim'
+            return `https://sunnah.com/${collection}/${h.book}/${h.hadith}`
+        };
+        const verseSources = verses.map(v => ({
+            type: 'quran',
+            label: `Surah ${v.surah}:${v.ayah} - ${v.en_translation.substring(0, 50)}...`,
+            url: `https://quran.com/${v.surah}/${v.ayah}`
+        }));
+        const hadithSources = hadiths.map(h => ({
+            type: 'hadith',
+            label: `${h.source} (Book ${h.book}, No. ${h.hadith}) - ${h.en_translation.substring(0, 50)}...`,
+            url: getHadithUrl(h)
+        }))
         res.json({ 
             reply: aiResponse,
-            sources: verses
+            sources: [...verseSources, ...hadithSources]
         })
     } 
     catch (error) {
