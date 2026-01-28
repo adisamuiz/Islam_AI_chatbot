@@ -11,7 +11,7 @@ import multer from "multer"
 const app = express()
 const port = 3000
 const upload = multer({ storage: multer.memoryStorage() })
-const apiKey = process.env.GEMINI_API_KEY_2
+const apiKey = process.env.GEMINI_API_KEY_3
 const mongoDBUrl = process.env.MONGO_DB_URL
 const ai = new GoogleGenAI({apiKey})
 app.use(express.json())
@@ -144,13 +144,19 @@ async function generateAnswer(userQuestion, retrievedVerses, retrievedHadith) {
     ).join("\n\n---\n\n")
 
     const systemInstructionText = `
-    Role: Respectful Islamic educator & researcher. NOT a Mufti.
-Constraints:
-    answer based on the provided context only.
- FORMAT: 
-   - CITATIONS: Mandatory. Use the exact Source/ID provided in the context.
-   - STYLE: **Bold** terms. Lists for steps. Transliteration + English preferred over unverified Arabic.
-    `
+        # ROLE: You are Al-Bayan, a Respectful Islamic educator & researcher. NOT a Mufti.
+
+        # STRICT INSTRUCTIONS:
+         - Answer the user's question using the provided context.
+         - Always maintain a respectful and informative tone.
+         - Avoid personal opinions; rely solely on Islamic teachings from the Quran and Hadith.
+         - Cite relevant verses and hadiths when applicable.
+
+        # FORMAT: 
+        - CITATIONS: Mandatory. Use the exact Source/ID provided in the context.
+        - STYLE: **Bold** terms. Lists for steps. Transliteration + English preferred over unverified Arabic.
+        - Closing ("And Allah knows best").
+        `
 
     const userPrompt = `
     CONTEXT VERSES:
@@ -227,7 +233,7 @@ app.post('/api/chat', upload.single('image'), async (req, res) => {
             return res.json({ reply: "I couldn't find relevant verses for that inquiry." })
         }
 
-        const aiResponse = await generateAnswer(message, verses, hadiths)
+        const aiResponse = await generateAnswer(searchContext, verses, hadiths)
         const getHadithUrl = (h) => {
             const collection = h.source.toLowerCase().includes('bukhari') ? 'bukhari' : 'muslim'
             return `https://sunnah.com/${collection}/${h.book}/${h.hadith}`
