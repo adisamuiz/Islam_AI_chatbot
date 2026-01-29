@@ -11,12 +11,12 @@ import multer from "multer"
 const app = express()
 const port = 3000
 const upload = multer({ storage: multer.memoryStorage() })
-const apiKey = process.env.GEMINI_API_KEY_3
+const apiKey = process.env.GEMINI_API_KEY
 const mongoDBUrl = process.env.MONGO_DB_URL
 const ai = new GoogleGenAI({apiKey})
 app.use(express.json())
 app.use(cors({
-    //origin: 'https://islam-ai-frontend.vercel.app' // Your Vercel Frontend URL
+    origin: 'https://al-bayan-six.vercel.app' // Your Vercel Frontend URL
 }))
 
 async function getQueryVecEmbedding(userInput){
@@ -46,7 +46,7 @@ async function findSimilarVerses(queryVector) {
                     "path": "quran_en_embeddings",
                     "queryVector": queryVector,
                     "numCandidates": 100, 
-                    "limit": 5
+                    "limit": 50
                 }
             },
             {
@@ -58,6 +58,14 @@ async function findSimilarVerses(queryVector) {
                     "en_translation": 1,
                     "similarity_score": { "$meta": "vectorSearchScore" }
                 }
+            },
+            {
+                "$match": {
+                    "similarity_score": { "$gte": 0.8 }
+                }
+            },
+            {
+                "$limit": 10
             }
         ])
         return results
@@ -77,7 +85,7 @@ async function findSimilarHadithBukhari(queryVector) {
                     "path": "hadith_bukhari_en_embeddings",
                     "queryVector": queryVector,
                     "numCandidates": 100, 
-                    "limit": 5
+                    "limit": 50
                 }
             },
             {
@@ -91,6 +99,14 @@ async function findSimilarHadithBukhari(queryVector) {
                     "en_translation": 1,
                     "similarity_score": { "$meta": "vectorSearchScore" }
                 }
+            },
+            {
+                "$match": {
+                    "similarity_score": { "$gte": 0.8 }
+                }
+            },
+            {
+                "$limit": 10
             }
         ])
         return results
@@ -110,7 +126,7 @@ async function findSimilarHadithMuslim(queryVector) {
                     "path": "hadith_muslim_en_embeddings",
                     "queryVector": queryVector,
                     "numCandidates": 100, 
-                    "limit": 5
+                    "limit": 50
                 }
             },
             {
@@ -124,6 +140,14 @@ async function findSimilarHadithMuslim(queryVector) {
                     "en_translation": 1,
                     "similarity_score": { "$meta": "vectorSearchScore" }
                 }
+            },
+            {
+                "$match": {
+                    "similarity_score": { "$gte": 0.8 }
+                }
+            },
+            {
+                "$limit": 10
             }
         ])
         return results
@@ -144,9 +168,10 @@ async function generateAnswer(userQuestion, retrievedVerses, retrievedHadith) {
     ).join("\n\n---\n\n")
 
     const systemInstructionText = `
-        # ROLE: You are Al-Bayan, a Respectful Islamic educator & researcher. NOT a Mufti.
+    
+        # ROLE: Al-Bayan, a Respectful Islamic educator & researcher. NOT a Mufti.
 
-        # STRICT INSTRUCTIONS:
+        # CONSTRIAINTS:
          - Answer the user's question using the provided context.
          - Always maintain a respectful and informative tone.
          - Avoid personal opinions; rely solely on Islamic teachings from the Quran and Hadith.
@@ -155,7 +180,6 @@ async function generateAnswer(userQuestion, retrievedVerses, retrievedHadith) {
         # FORMAT: 
         - CITATIONS: Mandatory. Use the exact Source/ID provided in the context.
         - STYLE: **Bold** terms. Lists for steps. Transliteration + English preferred over unverified Arabic.
-        - Closing ("And Allah knows best").
         `
 
     const userPrompt = `
@@ -187,7 +211,7 @@ async function generateAnswer(userQuestion, retrievedVerses, retrievedHadith) {
 
 app.post('/api/chat', upload.single('image'), async (req, res) => {
     try {
-        const message = req.body.message || "what is this about"
+        const message = req.body.message || "what is this image about"
         const imageFile = req.file
         let searchContext = message
         let imageAnalysis = ""
