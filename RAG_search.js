@@ -11,7 +11,7 @@ import multer from "multer"
 const app = express()
 const port = 3000
 const upload = multer({ storage: multer.memoryStorage() })
-const apiKey = process.env.GEMINI_API_KEY
+const apiKey = process.env.GEMINI_API_KEY_1
 const mongoDBUrl = process.env.MONGO_DB_URL
 const ai = new GoogleGenAI({apiKey})
 app.use(express.json())
